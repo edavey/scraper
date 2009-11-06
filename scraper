@@ -20,13 +20,13 @@ end
 
 def check_usage
   unless ARGV.size == 2
-    puts "Usage: scrape_page.rb url_to_scrape destination_folder"
+    puts "Usage: scraper url_to_scrape destination_folder"
     exit
   end
 end
 
 def scrape_images_from_page(source, destination = '.')
-  destination = "#{destination}/#{slugify(source)}"
+  destination = File.join(destination, slugify(source))
   Dir.mkdir(destination) unless File.exists?(destination)
   
   the_page = Hpricot(open(source))
@@ -38,7 +38,7 @@ def scrape_images_from_page(source, destination = '.')
   
   deleted = 0
   images.each do |img|
-    filepath = "#{destination}/#{rand(1000000)}__#{File.basename(img)}"
+    filepath = File.join(destination, "#{rand(1000000)}__#{File.basename(img)}" )
     image_file = open(filepath,"w")
     image_file.write(open(img).read)
     image_file.safe_close
