@@ -1,0 +1,61 @@
+#!/usr/bin/env ruby 
+
+require 'rubygems'
+require 'date'
+require 'open-uri'
+require 'hpricot'
+
+MIN_SIZE = 20000
+
+# fixes problem of IOError: closed stream errors suddenly appearing...
+class File
+  def safe_close
+    self.close if self and not self.closed?
+  end
+end
+
+def slugify(path)
+  path.gsub(/\W+/, '-').gsub(/^-+/,'').gsub(/-+$/,'').downcase
+end
+
+def check_usage
+  unless ARGV.size == 2
+    puts "Usage: scrape_page.rb url_to_scrape destination_folder"
+    exit
+  end
+end
+
+def scrape_images_from_page(source, destination = '.')
+  destination = "#{destination}/#{slugify(source)}"
+  Dir.mkdir(destination) unless File.exists?(destination)
+  
+  the_page = Hpricot(open(source))
+  images = the_page.search("img").map {|e| e["src"]} 
+  
+  puts
+  puts "#{images.size} images found on this page. Downloading to #{destination} now..."
+  puts
+  
+  deleted = 0
+  images.each do |img|
+    filepath = "#{destination}/#{rand(1000000)}__#{File.basename(img)}"
+    image_file = open(filepath,"w")
+    image_file.write(open(img).read)
+    image_file.safe_close
+    puts "   #{img} downloaded"
+    if File.size(filepath) < MIN_SIZE
+      puts "      -> deleting as too small (#{File.size(filepath) / 1000.to_i} KB)"
+      File.delete(filepath)
+      deleted += 1
+    end 
+  end
+
+  puts
+  puts "All done!"
+  puts "#{images.size - deleted} pictures have been saved to *#{destination}*"
+end
+
+if $0 == __FILE__
+  check_usage
+  scrape_images_from_page(ARGV[0], ARGV[1])
+end
